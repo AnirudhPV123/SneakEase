@@ -117,4 +117,9 @@ dist
 .yarn/install-state.gz
 .pnp.*
 
+# custom error file
+siteErrors.log
+siteErrorsDev.log
+
 # End of https://mrkandreev.name/snippets/gitignore-generator/#Node
+

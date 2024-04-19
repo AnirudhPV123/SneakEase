@@ -1,6 +1,6 @@
-import { createLogger, format, transports } from "winston"
-import {combine, timestamp, label, printf } from format
 
+import { createLogger, format, transports } from 'winston';
+const { combine, timestamp, label, printf, colorize } = format;
 
 const myFormat = printf(({ level, message, timestamp }) => {
   return `${level} ${timestamp} ${message}`;
@@ -8,9 +8,10 @@ const myFormat = printf(({ level, message, timestamp }) => {
 
 const developmentLogger = () => {
   return createLogger({
-    format: combine(format.colorize(), timestamp({format:"HH:mm:ss"}), myFormat),
-    transports: [new transports.File({ filename: 'siteErrors.log' }), new transports.Console()],
+    format: combine(colorize(), timestamp({ format: 'HH:mm:ss' }), myFormat),
+    transports: [new transports.File({ filename: 'siteErrorsDev.log' }), new transports.Console()],
   });
 };
 
 export { developmentLogger };
+

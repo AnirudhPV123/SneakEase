@@ -1,5 +1,5 @@
-import { createLogger, format, transports } from "winston"
-import {combine, timestamp, label, printf } from format
+import { createLogger, format, transports } from 'winston';
+const { combine, timestamp, label, printf, colorize } = format;
 
 const myFormat = printf(({ level, message, timestamp }) => {
   return `${level} ${timestamp} ${message}`;
@@ -13,3 +13,4 @@ const productionLogger = () => {
 };
 
 export { productionLogger };
+  

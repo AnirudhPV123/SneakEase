@@ -1,11 +1,12 @@
-class ApiError extends Error {
+class CustomError extends Error {
   constructor(statusCode, message = 'Something went wrong', errors = [], stack = '') {
     super(message);
     this.statusCode = statusCode;
     this.message = message;
-    this.success = false;
     this.errors = errors;
     this.data = null;
+    this.isOperational = true;
+    this.status = statusCode >= 400 && statusCode < 500 ? 'failed' : 'error';
 
     if (stack) {
       this.stack = stack;
@@ -15,4 +16,4 @@ class ApiError extends Error {
   }
 }
 
-export { ApiError };
+export { CustomError };
