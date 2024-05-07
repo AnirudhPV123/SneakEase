@@ -5,12 +5,11 @@ const myFormat = printf(({ level, message, timestamp }) => {
   return `${level} ${timestamp} ${message}`;
 });
 
-const productionLogger = () => {
+const developmentLogger = () => {
   return createLogger({
-    format: combine(timestamp(), myFormat),
-    transports: [new transports.File({ filename: 'siteErrors.log' })],
+    format: combine(colorize(), timestamp({ format: 'HH:mm:ss' }), myFormat),
+    transports: [new transports.File({ filename: 'siteErrorsDev.log' }), new transports.Console()],
   });
 };
 
-export { productionLogger };
-  
+export { developmentLogger };

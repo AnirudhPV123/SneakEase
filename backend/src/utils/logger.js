@@ -1,9 +1,8 @@
-import { developmentLogger } from '../config/developmentLogger.config.js';
-import { productionLogger } from '../config/productionLogger.config.js';
+import { developmentLogger } from '../config/logger/developmentLogger.config.js';
+import { productionLogger } from '../config/logger/productionLogger.config.js';
 
 let logger = null;
 
-console.log('here');
 if (process.env.NODE_ENV === 'development') {
   logger = developmentLogger();
 }

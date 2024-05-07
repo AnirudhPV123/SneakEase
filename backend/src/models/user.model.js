@@ -1,5 +1,6 @@
 import mongoose, { Schema } from 'mongoose';
 import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 import { CustomError } from '../utils/CustomError.js';
 
 // Define address schema
@@ -13,68 +14,122 @@ const addressSchema = new Schema({
   houseName: String,
 });
 
-// Define user schema
+// Define schema for email/password authentication
+const emailPasswordSchema = new Schema({
+  displayName: { type: String },
+  email: {
+    type: String,
+    unique: true,
+    sparse: true,
+    validate: {
+      validator: (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value), // Email validation regex
+      message: 'Invalid email address',
+    },
+  },
+  password: { type: String },
+  avatar: { type: String },
+  isActive: { type: Boolean },
+  otp: { type: Number }, 
+  otpExpiration: { type: String },
+});
+
+// Define schema for email/password authentication
+const phoneNumberPasswordSchema = new Schema({
+  displayName: { type: String },
+  phoneNumber: { type: String },
+  password: { type: String },
+  avatar: { type: String },
+  isActive: { type: Boolean },
+  otp: { type: Number },
+  otpExpiration: { type: String },
+});
+
+// Define a common authentication schema for google, facebook, github
+const authenticationSchema = new Schema({
+  displayName: { type: String },
+  providerId: { type: String, unique: true, sparse: true },
+  email: { type: String, unique: true, sparse: true },
+  avatar: { type: String },
+});
+
+// Define the main user schema
 const userSchema = new Schema(
   {
-    fullName: { type: String, required: true },
-    email: {
-      type: String,
-      required: true,
-      unique: true,
-      index: true,
-      validate: {
-        validator: (value) => {
-          // Regular expression for email validation
-          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-          return emailRegex.test(value);
-        },
-        message: 'Invalid email address',
-      },
+    addresses: [addressSchema],
+    refreshToken: { type: String },
+    authProviders: {
+      google: authenticationSchema,
+      facebook: authenticationSchema,
+      github: authenticationSchema,
+      email: emailPasswordSchema,
+      phone: phoneNumberPasswordSchema,
     },
-    password: { type: String, required: true },
-    address: [addressSchema],
-    image: { type: String },
   },
   { timestamps: true },
 );
 
-// Error handling for duplicate key error (unique email constraint)
-userSchema.post('save', (error, doc, next) => {
-  console.log(error);
-  if (error.name === 'MongoServerError' && error.code === 11000) {
-    next(new CustomError(401, 'Email address is already registered'));
+// Catch email validation error
+userSchema.post('validate', function (error, doc, next) {
+  if (error.name === 'ValidationError' && error.errors['authProviders.email.email']) {
+    next(new CustomError(400, 'Invalid email address'));
   } else {
     next(error);
   }
 });
 
+// password bcrypt
 userSchema.pre('save', async function (next) {
-  if (this.isModified('password')) {
-    this.password = await bcrypt.hash(this.password, 10);
+  const provider = this.authProviders
+    ? this.authProviders.email
+      ? 'email'
+      : this.authProviders.phone
+        ? 'phone'
+        : null
+    : null;
+
+  if (
+    !provider ||
+    !this.authProviders[provider] ||
+    !this.authProviders[provider].password ||
+    !this.isModified('authProviders.' + provider + '.password')
+  ) {
+    return next();
   }
-  next();
+
+  try {
+    this.authProviders[provider].password = await bcrypt.hash(
+      this.authProviders[provider].password,
+      10,
+    );
+    return next();
+  } catch (error) {
+    return next(error);
+  }
 });
 
-userSchema.methods.isPasswordCorrect = async function (password) {
-  return await bcrypt.compare(password, this.password);
+// check password correct
+userSchema.methods.isPasswordCorrect = async function (password, provider) {
+  return await bcrypt.compare(password, this.authProviders[provider].password);
 };
 
+// generate access token
 userSchema.methods.generateAccessToken = async function () {
   return jwt.sign(
     {
       _id: this._id,
     },
-    ACCESS_TOKEN_SECRET_KEY,
+    process.env.ACCESS_TOKEN_SECRET_KEY,
     { expiresIn: process.env.ACCESS_TOKEN_EXPIRY },
   );
 };
 
+// generate refresh token
 userSchema.methods.generateRefreshToken = async function () {
   return jwt.sign(
     {
       _id: this._id,
     },
-    REFRESH_TOKEN_SECRET_KEY,
+    process.env.REFRESH_TOKEN_SECRET_KEY,
     { expiresIn: process.env.REFRESH_TOKEN_EXPIRY },
   );
 };

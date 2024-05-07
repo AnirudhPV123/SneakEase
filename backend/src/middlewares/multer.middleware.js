@@ -1,4 +1,4 @@
-import multer from "multer"
+import multer from 'multer';
 
 // Configure Multer storage settings
 const storage = multer.diskStorage({
